@@ -1,0 +1,14 @@
+{
+  "outputs": {
+    "kafka": {
+      "key1": "foo",
+      "key2": {
+        "bar": ["baz", "qux"]
+      }
+    },
+    "localfile": {
+    }
+  },
+  "port": 8888,
+  "debug": true
+}
