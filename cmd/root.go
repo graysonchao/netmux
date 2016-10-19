@@ -2,8 +2,10 @@ package cmd
 
 import (
 	"fmt"
+	"log"
 	"os"
 
+	"github.com/graysonchao/udpmux/udpmux"
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
 )
@@ -16,23 +18,18 @@ var RootCmd = &cobra.Command{
 	Short: "Multiplex a UDP stream across several sources.",
 	Long:  `udpmux multiplexes a UDP stream across several sources.`,
 	Run: func(cmd *cobra.Command, args []string) {
+		logger := log.New(os.Stdout, "[udpmux] ", log.Lshortfile|log.LstdFlags)
+		logger.Printf("Using config file: %s", cfgFile)
+
 		cfg.Port = viper.GetInt("port")
 		cfg.Debug = viper.GetBool("debug")
 		cfg.Outputs = viper.GetStringMap("outputs")
 
-		if cfg.Debug {
-			fmt.Println(cfg)
-		}
-
-		//udpmux(cfg)
+		udpmux.Start(&cfg, logger)
 	},
 }
 
-var cfg = struct {
-	Outputs map[string]interface{}
-	Port    int
-	Debug   bool
-}{}
+var cfg = udpmux.Cfg{}
 
 // Execute adds all child commands to the root command sets flags appropriately.
 // This is called by main.main(). It only needs to happen once to the rootCmd.
@@ -67,9 +64,7 @@ func initConfig() {
 	}
 
 	// If a config file is found, read it in.
-	if err := viper.ReadInConfig(); err == nil {
-		fmt.Println("Using config file:", viper.ConfigFileUsed())
-	} else {
+	if err := viper.ReadInConfig(); err != nil {
 		fmt.Println(err)
 	}
 }
