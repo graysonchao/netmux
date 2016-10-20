@@ -5,8 +5,12 @@
       "path": "/usr/local/var/udpmux.1"
     },
     "udp0": {
-      "type": "remote",
+      "type": "udp",
       "address": "127.0.0.1:8889"
+    },
+	"my_unix": {
+      "type": "unix",
+      "address": "/usr/local/var/udpmux.sock"
     }
   },
   "port": 8888,

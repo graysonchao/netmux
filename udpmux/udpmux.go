@@ -29,12 +29,24 @@ func createOutputs(l *log.Logger) []Output {
 			}
 			go o.read()
 			outputs = append(outputs, o)
-		case outputDef["type"] == "remote":
+		case outputDef["type"] == "udp":
 			outAddr, err := net.ResolveUDPAddr("udp", outputDef["address"])
 			if err != nil {
 				l.Printf("Couldn't resolve address %s: %s\n", outputDef["address"], err)
 			}
-			o := &RemoteOutput{
+			o := &UDPOutput{
+				in:   make(chan []byte, 128),
+				quit: make(chan bool),
+				out:  outAddr,
+			}
+			go o.read()
+			outputs = append(outputs, o)
+		case outputDef["type"] == "unix":
+			outAddr, err := net.ResolveUnixAddr("unix", outputDef["address"])
+			if err != nil {
+				l.Printf("Couldn't resolve address %s: %s\n", outputDef["address"], err)
+			}
+			o := &UnixOutput{
 				in:   make(chan []byte, 128),
 				quit: make(chan bool),
 				out:  outAddr,

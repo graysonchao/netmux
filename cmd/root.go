@@ -15,8 +15,14 @@ var cfgFile string
 // RootCmd represents the base command when called without any subcommands
 var RootCmd = &cobra.Command{
 	Use:   "udpmux",
-	Short: "Multiplex a UDP stream across several sources.",
-	Long:  `udpmux multiplexes a UDP stream across several sources.`,
+	Short: "Multiplex a UDP stream across one or several sources.",
+	Long: `udpmux multiplexes a UDP stream across several sources.
+These can be named pipes, UDP listeners, or Unix domain sockets.
+
+The destinations to broadcast to are defined in the config file.
+
+Usage:
+udpmux --config <path/to/config.json>`,
 	Run: func(cmd *cobra.Command, args []string) {
 		logger := log.New(os.Stdout, "[udpmux] ", log.Lshortfile|log.LstdFlags)
 		logger.Printf("Using config file: %s", cfgFile)
