@@ -19,8 +19,7 @@ func createOutputs(l *log.Logger) []Output {
 			in:   make(chan []byte, 128),
 			quit: make(chan bool),
 		}
-		switch {
-		case outputDef["type"] == "pipe":
+		if outputDef["type"] == "pipe" {
 			if err := mkfifo(outputDef["path"], 0660); err != nil {
 				l.Printf("Couldn't create named pipe for output %s at %s: %s\n", name, outputDef["path"], err)
 			}
@@ -35,11 +34,26 @@ func createOutputs(l *log.Logger) []Output {
 			}
 			go o.read()
 			outputs = append(outputs, o)
-		case outputDef["type"] == "udp":
-			outAddr, err := net.ResolveUDPAddr("udp", outputDef["address"])
-			conn, err := net.Dial(outAddr.Network(), outAddr.String())
+		} else {
+			var outAddr net.Addr
+			var err error
+			switch {
+			case outputDef["type"] == "udp":
+				outAddr, err = net.ResolveUDPAddr("udp", outputDef["address"])
+			case outputDef["type"] == "unix":
+				outAddr, err = net.ResolveUnixAddr("unix", outputDef["address"])
+			case outputDef["type"] == "tcp":
+				outAddr, err = net.ResolveTCPAddr("tcp", outputDef["address"])
+			default:
+				l.Printf("Found invalid output definition at %s: invalid type\n", name)
+			}
 			if err != nil {
 				l.Printf("Couldn't resolve address %s: %s\n", outputDef["address"], err)
+				continue
+			}
+			conn, err := net.Dial(outAddr.Network(), outAddr.String())
+			if err != nil {
+				l.Printf("Couldn't dial address %s: %s\n", outputDef["address"], err)
 				continue
 			}
 			o := &NetOutput{
@@ -49,36 +63,6 @@ func createOutputs(l *log.Logger) []Output {
 			}
 			go o.read()
 			outputs = append(outputs, o)
-		case outputDef["type"] == "unix":
-			outAddr, err := net.ResolveUnixAddr("unix", outputDef["address"])
-			conn, err := net.Dial(outAddr.Network(), outAddr.String())
-			if err != nil {
-				l.Printf("Couldn't resolve address %s: %s\n", outputDef["address"], err)
-				continue
-			}
-			o := &NetOutput{
-				Worker: w,
-				out:    outAddr,
-				conn:   conn,
-			}
-			go o.read()
-			outputs = append(outputs, o)
-		case outputDef["type"] == "tcp":
-			outAddr, err := net.ResolveTCPAddr("tcp", outputDef["address"])
-			conn, err := net.Dial(outAddr.Network(), outAddr.String())
-			if err != nil {
-				l.Printf("Couldn't resolve address %s: %s\n", outputDef["address"], err)
-				continue
-			}
-			o := &NetOutput{
-				Worker: w,
-				out:    outAddr,
-				conn:   conn,
-			}
-			go o.read()
-			outputs = append(outputs, o)
-		default:
-			l.Printf("Found invalid output definition at %s: invalid type\n", name)
 		}
 	}
 	return outputs
