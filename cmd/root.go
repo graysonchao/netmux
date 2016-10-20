@@ -21,16 +21,9 @@ var RootCmd = &cobra.Command{
 		logger := log.New(os.Stdout, "[udpmux] ", log.Lshortfile|log.LstdFlags)
 		logger.Printf("Using config file: %s", cfgFile)
 
-		cfg.Port = viper.GetString("port")
-		cfg.Debug = viper.GetBool("debug")
-		cfg.Outputs = viper.GetStringMap("outputs")
-		cfg.BufferSize = viper.GetInt("receiveBufferSizeBytes")
-
-		udpmux.Start(&cfg, logger)
+		udpmux.Start(logger)
 	},
 }
-
-var cfg = udpmux.Cfg{}
 
 // Execute adds all child commands to the root command sets flags appropriately.
 // This is called by main.main(). It only needs to happen once to the rootCmd.

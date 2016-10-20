@@ -1,12 +1,12 @@
 {
   "outputs": {
-    "kafka": {
-      "key1": "foo",
-      "key2": {
-        "bar": ["baz", "qux"]
-      }
+    "fifo": {
+      "type": "pipe",
+      "path": "/usr/local/var/udpmux.1"
     },
-    "localfile": {
+    "udp0": {
+      "type": "remote",
+      "address": "127.0.0.1:8889"
     }
   },
   "port": 8888,
