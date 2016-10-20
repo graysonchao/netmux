@@ -6,7 +6,6 @@ import (
 	"os"
 
 	"github.com/spf13/viper"
-	"golang.org/x/sys/unix"
 )
 
 func createOutputs(l *log.Logger) []Output {
@@ -16,7 +15,7 @@ func createOutputs(l *log.Logger) []Output {
 		outputDef := viper.GetStringMapString("outputs." + name)
 		switch {
 		case outputDef["type"] == "pipe":
-			if err := unix.Mkfifo(outputDef["path"], 0666); err != nil {
+			if err := mkfifo(outputDef["path"], 0666); err != nil {
 				l.Printf("Couldn't create named pipe for output %s at %s: %s\n", name, outputDef["path"], err)
 			}
 			outPipe, err := os.OpenFile(outputDef["path"], os.O_RDWR, os.ModeNamedPipe)
@@ -29,7 +28,6 @@ func createOutputs(l *log.Logger) []Output {
 				out:  outPipe,
 			}
 			go o.read()
-			//output := NewPipeOutput(outputDef)
 			outputs = append(outputs, o)
 		case outputDef["type"] == "remote":
 			outAddr, err := net.ResolveUDPAddr("udp", outputDef["address"])
@@ -42,7 +40,6 @@ func createOutputs(l *log.Logger) []Output {
 				out:  outAddr,
 			}
 			go o.read()
-			//output := NewRemoteOutput(outputDef)
 			outputs = append(outputs, o)
 		default:
 			l.Printf("Found invalid output definition at %s: invalid type\n", name)
