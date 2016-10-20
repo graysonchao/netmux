@@ -1,4 +1,4 @@
-# udpfork
+# udpmux
 Take a UDP connection and broadcast it to Unix named pipes and remote UDP servers.
 
 ## Usage
