@@ -21,9 +21,10 @@ var RootCmd = &cobra.Command{
 		logger := log.New(os.Stdout, "[udpmux] ", log.Lshortfile|log.LstdFlags)
 		logger.Printf("Using config file: %s", cfgFile)
 
-		cfg.Port = viper.GetInt("port")
+		cfg.Port = viper.GetString("port")
 		cfg.Debug = viper.GetBool("debug")
 		cfg.Outputs = viper.GetStringMap("outputs")
+		cfg.BufferSize = viper.GetInt("receiveBufferSizeBytes")
 
 		udpmux.Start(&cfg, logger)
 	},
