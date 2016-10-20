@@ -1,7 +1,7 @@
 # udpmux
 Take a UDP connection and broadcast it to other UDP listeners, Unix named pipes, and Unix domain sockets.
 
-If a named pipe in the config does not exist, `udpfork` will try to create it,
+If a named pipe in the config does not exist, `udpmux` will try to create it,
  but it won't overwrite existing named pipes.
 
 ## Usage
@@ -19,6 +19,6 @@ If you try to use the example config, you should create the Unix domain socket f
     nc -U -l /usr/local/var/udpmux.sock
 
 ## Notes
-`udpfork` uses `unix.mkfifo` on FreeBSD and Darwin and `unix.mknod` on Linux.
+`udpmux` uses `unix.mkfifo` on FreeBSD and Darwin and `unix.mknod` on Linux.
 
 The Unix domain socket type used is SOCK_STREAM.
