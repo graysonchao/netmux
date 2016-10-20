@@ -12,6 +12,7 @@ An example configuration is provided. It includes one of each type of output:
 
 * "fifo" is a named pipe at `/usr/local/var/netmux.1`
 * "udp0" sends output over UDP to 127.0.0.1:8889.
+* "tcp0" sends output over TCP to 127.0.0.1:8890
 * "my_unix" sends output to a Unix domain socket at `/usr/local/var/netmux.sock`.
 
 If you try to use the example config, you should create the Unix domain socket first:
