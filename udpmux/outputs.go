@@ -28,6 +28,7 @@ type UnixOutput struct {
 
 type Output interface {
 	send([]byte)
+	teardown()
 }
 
 func (o *PipeOutput) send(chunk []byte) {
@@ -56,10 +57,13 @@ func (o *PipeOutput) read() {
 	}
 }
 
+func (o *PipeOutput) teardown() {}
+
 func (o *UDPOutput) read() {
 	conn, err := net.DialUDP("udp", nil, o.out)
 	if err != nil {
 		fmt.Printf("Couldn't dial address %s: %s\n", o.out, err)
+		return
 	}
 	o.conn = conn
 	for {
@@ -91,10 +95,14 @@ func (o *UDPOutput) tryReconnect(chunk []byte) (*net.UDPConn, error) {
 	return nil, err
 }
 
+func (o *UDPOutput) teardown() {
+}
+
 func (o *UnixOutput) read() {
 	conn, err := net.DialUnix("unix", nil, o.out)
 	if err != nil {
 		fmt.Printf("Couldn't dial address %s: %s\n", o.out, err)
+		return
 	}
 	o.conn = conn
 	for {
@@ -124,4 +132,8 @@ func (o *UnixOutput) tryReconnect(chunk []byte) (*net.UnixConn, error) {
 		}
 	}
 	return nil, err
+}
+
+func (o *UnixOutput) teardown() {
+	os.Remove(o.out.String())
 }

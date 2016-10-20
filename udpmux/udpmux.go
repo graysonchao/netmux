@@ -4,8 +4,10 @@ import (
 	"log"
 	"net"
 	"os"
+	"os/signal"
 
 	"github.com/spf13/viper"
+	"golang.org/x/sys/unix"
 )
 
 func createOutputs(l *log.Logger) []Output {
@@ -15,12 +17,14 @@ func createOutputs(l *log.Logger) []Output {
 		outputDef := viper.GetStringMapString("outputs." + name)
 		switch {
 		case outputDef["type"] == "pipe":
-			if err := mkfifo(outputDef["path"], 0666); err != nil {
+			if err := mkfifo(outputDef["path"], 0660); err != nil {
 				l.Printf("Couldn't create named pipe for output %s at %s: %s\n", name, outputDef["path"], err)
+				continue
 			}
 			outPipe, err := os.OpenFile(outputDef["path"], os.O_RDWR, os.ModeNamedPipe)
 			if err != nil {
 				l.Printf("Couldn't open named pipe for output %s at %s: %s\n", name, outputDef["path"], err)
+				continue
 			}
 			o := &PipeOutput{
 				in:   make(chan []byte, 128),
@@ -33,6 +37,7 @@ func createOutputs(l *log.Logger) []Output {
 			outAddr, err := net.ResolveUDPAddr("udp", outputDef["address"])
 			if err != nil {
 				l.Printf("Couldn't resolve address %s: %s\n", outputDef["address"], err)
+				continue
 			}
 			o := &UDPOutput{
 				in:   make(chan []byte, 128),
@@ -45,6 +50,7 @@ func createOutputs(l *log.Logger) []Output {
 			outAddr, err := net.ResolveUnixAddr("unix", outputDef["address"])
 			if err != nil {
 				l.Printf("Couldn't resolve address %s: %s\n", outputDef["address"], err)
+				continue
 			}
 			o := &UnixOutput{
 				in:   make(chan []byte, 128),
@@ -75,6 +81,17 @@ func Start(l *log.Logger) {
 
 	outputs := createOutputs(l)
 	l.Printf("Created outputs %s", outputs)
+
+	// Cleanup outputs on SIGTERM
+	c := make(chan os.Signal, 2)
+	signal.Notify(c, os.Interrupt, unix.SIGTERM)
+	go func() {
+		<-c
+		for _, o := range outputs {
+			o.teardown()
+		}
+		os.Exit(0)
+	}()
 
 	for {
 		n, _, err := ln.ReadFromUDP(buf)
