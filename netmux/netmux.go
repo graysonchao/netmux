@@ -19,7 +19,6 @@ func createOutputs(l *log.Logger) []Output {
 		case outputDef["type"] == "pipe":
 			if err := mkfifo(outputDef["path"], 0660); err != nil {
 				l.Printf("Couldn't create named pipe for output %s at %s: %s\n", name, outputDef["path"], err)
-				continue
 			}
 			outPipe, err := os.OpenFile(outputDef["path"], os.O_RDWR, os.ModeNamedPipe)
 			if err != nil {
@@ -59,6 +58,19 @@ func createOutputs(l *log.Logger) []Output {
 			}
 			go o.read()
 			outputs = append(outputs, o)
+		case outputDef["type"] == "tcp":
+			outAddr, err := net.ResolveTCPAddr("tcp", outputDef["address"])
+			if err != nil {
+				l.Printf("Couldn't resolve address %s: %s\n", outputDef["address"], err)
+				continue
+			}
+			o := &TCPOutput{
+				in:   make(chan []byte, 128),
+				quit: make(chan bool),
+				out:  outAddr,
+			}
+			go o.read()
+			outputs = append(outputs, o)
 		default:
 			l.Printf("Found invalid output definition at %s: invalid type\n", name)
 		}
@@ -66,22 +78,53 @@ func createOutputs(l *log.Logger) []Output {
 	return outputs
 }
 
-func Start(l *log.Logger) {
+func StartTCP(l *log.Logger) {
 	//debug := viper.GetBool("debug")
-	myAddress, err := net.ResolveUDPAddr("udp", "localhost:"+viper.GetString("port"))
-	ln, err := net.ListenUDP("udp", myAddress)
+	// Cleanup outputs on SIGTERM
+	outputs := createOutputs(l)
+	l.Printf("Created outputs %s", outputs)
+	c := make(chan os.Signal, 2)
+	signal.Notify(c, os.Interrupt, unix.SIGTERM)
+	go func() {
+		<-c
+		for _, o := range outputs {
+			o.teardown()
+		}
+		os.Exit(0)
+	}()
+
+	// Start listening for connections
+	myAddress, err := net.ResolveTCPAddr("tcp", "localhost:"+viper.GetString("port"))
+	ln, err := net.ListenTCP("tcp", myAddress)
 	if err != nil {
 		l.Printf("Couldn't start listening: %s\n", err)
 		return
 	}
+	l.Println("Listening for TCP connections on", myAddress)
 
-	l.Println("Listening on", myAddress)
-	receiveBufferSizeBytes := viper.GetInt("receiveBufferSizeBytes")
-	buf := make([]byte, receiveBufferSizeBytes)
+	// Main loop - accept a connection and handle it until it's closed.
+	// We only accept a single TCP connection at a time.
+	for {
+		conn, err := ln.AcceptTCP()
+		if err != nil {
+			l.Printf("Error accepting TCP connection: %s", err)
+			conn.Close()
+			return
+		}
 
+		receiveBufferSizeBytes := viper.GetInt("receiveBufferSizeBytes")
+		buf := make([]byte, receiveBufferSizeBytes)
+		bytesRead, _ := conn.Read(buf)
+		for _, o := range outputs {
+			o.send(buf[0:bytesRead])
+		}
+		conn.Close()
+	}
+}
+
+func StartUDP(l *log.Logger) {
 	outputs := createOutputs(l)
 	l.Printf("Created outputs %s", outputs)
-
 	// Cleanup outputs on SIGTERM
 	c := make(chan os.Signal, 2)
 	signal.Notify(c, os.Interrupt, unix.SIGTERM)
@@ -93,6 +136,17 @@ func Start(l *log.Logger) {
 		os.Exit(0)
 	}()
 
+	receiveBufferSizeBytes := viper.GetInt("receiveBufferSizeBytes")
+	buf := make([]byte, receiveBufferSizeBytes)
+
+	myAddress, err := net.ResolveUDPAddr("udp", "localhost:"+viper.GetString("port"))
+	ln, err := net.ListenUDP("udp", myAddress)
+	if err != nil {
+		l.Printf("Couldn't start listening: %s\n", err)
+		return
+	}
+	l.Println("Listening for UDP connections on", myAddress)
+
 	for {
 		n, _, err := ln.ReadFromUDP(buf)
 		if err != nil {
@@ -101,5 +155,16 @@ func Start(l *log.Logger) {
 		for _, o := range outputs {
 			o.send(buf[0:n])
 		}
+	}
+}
+
+func Start(l *log.Logger) {
+	switch {
+	case viper.GetString("input") == "tcp":
+		StartTCP(l)
+	case viper.GetString("input") == "udp":
+		StartUDP(l)
+	default:
+		l.Printf("Invalid input type: %s", viper.GetString("input"))
 	}
 }
