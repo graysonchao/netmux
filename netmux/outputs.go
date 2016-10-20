@@ -6,31 +6,20 @@ import (
 	"os"
 )
 
+type Worker struct {
+	in   chan []byte
+	quit chan bool
+}
+
 type PipeOutput struct {
-	in   chan []byte
-	out  *os.File
-	quit chan bool
+	Worker
+	out *os.File
 }
 
-type UDPOutput struct {
-	in   chan []byte
-	out  *net.UDPAddr
-	quit chan bool
-	conn *net.UDPConn
-}
-
-type UnixOutput struct {
-	in   chan []byte
-	out  *net.UnixAddr
-	quit chan bool
-	conn *net.UnixConn
-}
-
-type TCPOutput struct {
-	in   chan []byte
-	out  *net.TCPAddr
-	quit chan bool
-	conn *net.TCPConn
+type NetOutput struct {
+	Worker
+	out  net.Addr
+	conn net.Conn
 }
 
 type Output interface {
@@ -38,20 +27,8 @@ type Output interface {
 	teardown()
 }
 
-func (o *PipeOutput) send(chunk []byte) {
-	o.in <- chunk
-}
-
-func (o *UDPOutput) send(chunk []byte) {
-	o.in <- chunk
-}
-
-func (o *UnixOutput) send(chunk []byte) {
-	o.in <- chunk
-}
-
-func (o *TCPOutput) send(chunk []byte) {
-	o.in <- chunk
+func (w *Worker) send(chunk []byte) {
+	w.in <- chunk
 }
 
 func (o *PipeOutput) read() {
@@ -62,142 +39,47 @@ func (o *PipeOutput) read() {
 				fmt.Println("Error writing to outfile! Terminating output")
 				o.quit <- true
 			}
-			o.out.Write([]byte("\n===\n"))
 		case <-o.quit:
 			return
 		}
 	}
 }
 
-func (o *PipeOutput) teardown() {
-}
+func (o *PipeOutput) teardown() {}
 
-func (o *UDPOutput) read() {
-	conn, err := net.DialUDP("udp", nil, o.out)
-	if err != nil {
-		fmt.Printf("Couldn't dial address %s: %s\n", o.out, err)
-		return
-	}
-	o.conn = conn
-	defer o.conn.Close()
+func (n *NetOutput) read() {
+	defer n.conn.Close()
 	for {
 		select {
-		case chunk := <-o.in:
-			if _, err := conn.Write(chunk); err != nil {
-				conn, err := o.tryReconnect(chunk)
+		case chunk := <-n.in:
+			if _, err := n.conn.Write(chunk); err != nil {
+				conn, err := n.tryReconnect(chunk)
 				if err != nil {
 					fmt.Println("Error writing to remote addr! Terminating output")
-					o.quit <- true
+					n.quit <- true
 				}
-				o.conn = conn
+				n.conn = conn
 			}
-		case <-o.quit:
+		case <-n.quit:
 			return
 		}
 	}
 }
 
-func (o *UDPOutput) tryReconnect(chunk []byte) (*net.UDPConn, error) {
+func (n *NetOutput) tryReconnect(chunk []byte) (net.Conn, error) {
 	var err error
 	for i := 0; i < 5; i++ {
-		conn, err := net.DialUDP("udp", nil, o.out)
+		conn, err := net.Dial(n.out.Network(), n.out.String())
 		if err == nil {
 			conn.Write(chunk)
-			return conn, nil
+			return n.conn, nil
 		}
 	}
 	return nil, err
 }
 
-func (o *UDPOutput) teardown() {
-	if o.conn != nil {
-		o.conn.Close()
-	}
-}
-
-func (o *UnixOutput) read() {
-	conn, err := net.DialUnix("unix", nil, o.out)
-	if err != nil {
-		fmt.Printf("Couldn't dial address %s: %s\n", o.out, err)
-		return
-	}
-	o.conn = conn
-	defer o.conn.Close()
-	for {
-		select {
-		case chunk := <-o.in:
-			if _, err := conn.Write(chunk); err != nil {
-				conn, err := o.tryReconnect(chunk)
-				if err != nil {
-					fmt.Println("Error writing to remote addr! Terminating output")
-					o.quit <- true
-				}
-				o.conn = conn
-			}
-		case <-o.quit:
-			return
-		}
-	}
-}
-
-func (o *UnixOutput) tryReconnect(chunk []byte) (*net.UnixConn, error) {
-	var err error
-	for i := 0; i < 5; i++ {
-		conn, err := net.DialUnix("udp", nil, o.out)
-		if err == nil {
-			conn.Write(chunk)
-			return conn, nil
-		}
-	}
-	return nil, err
-}
-
-func (o *UnixOutput) teardown() {
-	if o.conn != nil {
-		o.conn.Close()
-	}
-	os.Remove(o.out.String())
-}
-
-func (o *TCPOutput) read() {
-	conn, err := net.DialTCP("tcp", nil, o.out)
-	if err != nil {
-		fmt.Printf("Couldn't dial address %s: %s\n", o.out, err)
-		return
-	}
-	o.conn = conn
-	defer o.conn.Close()
-	for {
-		select {
-		case chunk := <-o.in:
-			if _, err := conn.Write(chunk); err != nil {
-				conn, err := o.tryReconnect(chunk)
-				if err != nil {
-					fmt.Println("Error writing to remote addr! Terminating output")
-					o.quit <- true
-				}
-				o.conn = conn
-			}
-		case <-o.quit:
-			return
-		}
-	}
-}
-
-func (o *TCPOutput) tryReconnect(chunk []byte) (*net.TCPConn, error) {
-	var err error
-	for i := 0; i < 5; i++ {
-		conn, err := net.DialTCP("udp", nil, o.out)
-		if err == nil {
-			conn.Write(chunk)
-			return conn, nil
-		}
-	}
-	return nil, err
-}
-
-func (o *TCPOutput) teardown() {
-	if o.conn != nil {
-		o.conn.Close()
+func (n *NetOutput) teardown() {
+	if n.conn != nil {
+		n.conn.Close()
 	}
 }

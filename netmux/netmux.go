@@ -15,6 +15,10 @@ func createOutputs(l *log.Logger) []Output {
 
 	for name := range viper.GetStringMap("outputs") {
 		outputDef := viper.GetStringMapString("outputs." + name)
+		w := Worker{
+			in:   make(chan []byte, 128),
+			quit: make(chan bool),
+		}
 		switch {
 		case outputDef["type"] == "pipe":
 			if err := mkfifo(outputDef["path"], 0660); err != nil {
@@ -26,48 +30,50 @@ func createOutputs(l *log.Logger) []Output {
 				continue
 			}
 			o := &PipeOutput{
-				in:   make(chan []byte, 128),
-				quit: make(chan bool),
-				out:  outPipe,
+				Worker: w,
+				out:    outPipe,
 			}
 			go o.read()
 			outputs = append(outputs, o)
 		case outputDef["type"] == "udp":
 			outAddr, err := net.ResolveUDPAddr("udp", outputDef["address"])
+			conn, err := net.Dial(outAddr.Network(), outAddr.String())
 			if err != nil {
 				l.Printf("Couldn't resolve address %s: %s\n", outputDef["address"], err)
 				continue
 			}
-			o := &UDPOutput{
-				in:   make(chan []byte, 128),
-				quit: make(chan bool),
-				out:  outAddr,
+			o := &NetOutput{
+				Worker: w,
+				out:    outAddr,
+				conn:   conn,
 			}
 			go o.read()
 			outputs = append(outputs, o)
 		case outputDef["type"] == "unix":
 			outAddr, err := net.ResolveUnixAddr("unix", outputDef["address"])
+			conn, err := net.Dial(outAddr.Network(), outAddr.String())
 			if err != nil {
 				l.Printf("Couldn't resolve address %s: %s\n", outputDef["address"], err)
 				continue
 			}
-			o := &UnixOutput{
-				in:   make(chan []byte, 128),
-				quit: make(chan bool),
-				out:  outAddr,
+			o := &NetOutput{
+				Worker: w,
+				out:    outAddr,
+				conn:   conn,
 			}
 			go o.read()
 			outputs = append(outputs, o)
 		case outputDef["type"] == "tcp":
 			outAddr, err := net.ResolveTCPAddr("tcp", outputDef["address"])
+			conn, err := net.Dial(outAddr.Network(), outAddr.String())
 			if err != nil {
 				l.Printf("Couldn't resolve address %s: %s\n", outputDef["address"], err)
 				continue
 			}
-			o := &TCPOutput{
-				in:   make(chan []byte, 128),
-				quit: make(chan bool),
-				out:  outAddr,
+			o := &NetOutput{
+				Worker: w,
+				out:    outAddr,
+				conn:   conn,
 			}
 			go o.read()
 			outputs = append(outputs, o)

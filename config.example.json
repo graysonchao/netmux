@@ -8,9 +8,13 @@
       "type": "udp",
       "address": "127.0.0.1:8889"
     },
-	"my_unix": {
+    "my_unix": {
       "type": "unix",
       "address": "/usr/local/var/netmux.sock"
+    },
+    "tcp0": {
+      "type": "tcp",
+      "address": "127.0.0.1:8890"
     }
   },
   "input": "tcp",
