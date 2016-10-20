@@ -62,13 +62,15 @@ func (o *PipeOutput) read() {
 				fmt.Println("Error writing to outfile! Terminating output")
 				o.quit <- true
 			}
+			o.out.Write([]byte("\n===\n"))
 		case <-o.quit:
 			return
 		}
 	}
 }
 
-func (o *PipeOutput) teardown() {}
+func (o *PipeOutput) teardown() {
+}
 
 func (o *UDPOutput) read() {
 	conn, err := net.DialUDP("udp", nil, o.out)
@@ -108,6 +110,9 @@ func (o *UDPOutput) tryReconnect(chunk []byte) (*net.UDPConn, error) {
 }
 
 func (o *UDPOutput) teardown() {
+	if o.conn != nil {
+		o.conn.Close()
+	}
 }
 
 func (o *UnixOutput) read() {
@@ -148,6 +153,9 @@ func (o *UnixOutput) tryReconnect(chunk []byte) (*net.UnixConn, error) {
 }
 
 func (o *UnixOutput) teardown() {
+	if o.conn != nil {
+		o.conn.Close()
+	}
 	os.Remove(o.out.String())
 }
 
@@ -189,5 +197,7 @@ func (o *TCPOutput) tryReconnect(chunk []byte) (*net.TCPConn, error) {
 }
 
 func (o *TCPOutput) teardown() {
-	os.Remove(o.out.String())
+	if o.conn != nil {
+		o.conn.Close()
+	}
 }
