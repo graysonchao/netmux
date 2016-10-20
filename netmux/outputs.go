@@ -1,4 +1,4 @@
-package udpmux
+package netmux
 
 import (
 	"fmt"

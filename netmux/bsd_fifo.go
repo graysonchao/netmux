@@ -1,6 +1,6 @@
 // +build darwin freebsd
 
-package udpmux
+package netmux
 
 import "golang.org/x/sys/unix"
 

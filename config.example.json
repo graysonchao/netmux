@@ -2,7 +2,7 @@
   "outputs": {
     "fifo": {
       "type": "pipe",
-      "path": "/usr/local/var/udpmux.1"
+      "path": "/usr/local/var/netmux.1"
     },
     "udp0": {
       "type": "udp",
@@ -10,7 +10,7 @@
     },
 	"my_unix": {
       "type": "unix",
-      "address": "/usr/local/var/udpmux.sock"
+      "address": "/usr/local/var/netmux.sock"
     }
   },
   "port": 8888,
