@@ -1,0 +1,20 @@
+{
+  "outputs": {
+    "fifo": {
+      "type": "pipe",
+      "path": "/usr/local/var/netmux.1"
+    },
+    "udp0": {
+      "type": "udp",
+      "address": "127.0.0.1:8889"
+    },
+	"my_unix": {
+      "type": "unix",
+      "address": "/usr/local/var/netmux.sock"
+    }
+  },
+  "input": "tcp",
+  "port": 8888,
+  "debug": true,
+  "receiveBufferSizeBytes": 4096
+}

@@ -114,9 +114,12 @@ func StartTCP(l *log.Logger) {
 
 		receiveBufferSizeBytes := viper.GetInt("receiveBufferSizeBytes")
 		buf := make([]byte, receiveBufferSizeBytes)
-		bytesRead, _ := conn.Read(buf)
-		for _, o := range outputs {
-			o.send(buf[0:bytesRead])
+		bytesRead, err := conn.Read(buf)
+		for err == nil {
+			for _, o := range outputs {
+				o.send(buf[0:bytesRead])
+			}
+			bytesRead, err = conn.Read(buf)
 		}
 		conn.Close()
 	}
