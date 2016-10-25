@@ -4,14 +4,6 @@
       "type": "pipe",
       "path": "/usr/local/var/netmux.1"
     },
-    "udp0": {
-      "type": "udp",
-      "address": "127.0.0.1:8889"
-    },
-    "my_unix": {
-      "type": "unix",
-      "address": "/usr/local/var/netmux.sock"
-    },
     "tcp0": {
       "type": "tcp",
       "address": "127.0.0.1:8890"
@@ -19,6 +11,7 @@
   },
   "input": "tcp",
   "port": 8888,
+  "address": "127.0.0.1",
   "debug": true,
   "receiveBufferSizeBytes": 4096
 }

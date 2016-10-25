@@ -84,7 +84,7 @@ func StartTCP(l *log.Logger) {
 	}()
 
 	// Start listening for connections
-	myAddress, err := net.ResolveTCPAddr("tcp", "localhost:"+viper.GetString("port"))
+	myAddress, err := net.ResolveTCPAddr("tcp", viper.GetString("address")+":"+viper.GetString("port"))
 	ln, err := net.ListenTCP("tcp", myAddress)
 	if err != nil {
 		l.Printf("Couldn't start listening: %s\n", err)
@@ -132,7 +132,7 @@ func StartUDP(l *log.Logger) {
 	receiveBufferSizeBytes := viper.GetInt("receiveBufferSizeBytes")
 	buf := make([]byte, receiveBufferSizeBytes)
 
-	myAddress, err := net.ResolveUDPAddr("udp", "localhost:"+viper.GetString("port"))
+	myAddress, err := net.ResolveUDPAddr("udp", viper.GetString("address")+":"+viper.GetString("port"))
 	ln, err := net.ListenUDP("udp", myAddress)
 	if err != nil {
 		l.Printf("Couldn't start listening: %s\n", err)
