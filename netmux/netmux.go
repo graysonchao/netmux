@@ -6,6 +6,7 @@ import (
 	"os"
 	"os/signal"
 
+	"github.com/pkg/profile"
 	"github.com/spf13/viper"
 	"golang.org/x/sys/unix"
 )
@@ -71,6 +72,7 @@ func createOutputs(l *log.Logger) []Output {
 func StartTCP(l *log.Logger) {
 	//debug := viper.GetBool("debug")
 	// Cleanup outputs on SIGTERM
+	p := profile.Start(profile.MemProfile, profile.ProfilePath("."), profile.NoShutdownHook)
 	outputs := createOutputs(l)
 	l.Printf("Created outputs %s", outputs)
 	c := make(chan os.Signal, 2)
@@ -80,6 +82,7 @@ func StartTCP(l *log.Logger) {
 		for _, o := range outputs {
 			o.teardown()
 		}
+		p.Stop()
 		os.Exit(0)
 	}()
 
@@ -116,6 +119,7 @@ func StartTCP(l *log.Logger) {
 }
 
 func StartUDP(l *log.Logger) {
+	p := profile.Start(profile.MemProfile, profile.ProfilePath("."), profile.NoShutdownHook)
 	outputs := createOutputs(l)
 	l.Printf("Created outputs %s", outputs)
 	// Cleanup outputs on SIGTERM
@@ -126,6 +130,7 @@ func StartUDP(l *log.Logger) {
 		for _, o := range outputs {
 			o.teardown()
 		}
+		p.Stop()
 		os.Exit(0)
 	}()
 
