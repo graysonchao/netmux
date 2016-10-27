@@ -6,11 +6,15 @@ import (
 	"os"
 
 	"github.com/graysonchao/netmux/netmux"
+	"github.com/pkg/profile"
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
 )
 
 var cfgFile string
+var cpuProfile bool
+var memProfile bool
+var blockProfile bool
 
 // RootCmd represents the base command when called without any subcommands
 var RootCmd = &cobra.Command{
@@ -27,7 +31,19 @@ netmux --config <path/to/config.json>`,
 		logger := log.New(os.Stdout, "[netmux] ", log.Lshortfile|log.LstdFlags)
 		logger.Printf("Using config file: %s", cfgFile)
 
-		netmux.Start(logger)
+		switch {
+		case memProfile:
+			p := profile.Start(profile.MemProfile, profile.ProfilePath("."), profile.NoShutdownHook).(*profile.Profile)
+			netmux.Start(logger, p)
+		case cpuProfile:
+			p := profile.Start(profile.CPUProfile, profile.ProfilePath("."), profile.NoShutdownHook).(*profile.Profile)
+			netmux.Start(logger, p)
+		case blockProfile:
+			p := profile.Start(profile.BlockProfile, profile.ProfilePath("."), profile.NoShutdownHook).(*profile.Profile)
+			netmux.Start(logger, p)
+		default:
+			logger.Println("What do I look like, a production build? You gotta pick a profiling method!")
+		}
 	},
 }
 
@@ -49,6 +65,9 @@ func init() {
 	// will be global for your application.
 
 	//RootCmd.PersistentFlags().StringVar(&cfgFile, "config", "", "config file (default is $HOME/.netmux.yaml)")
+	RootCmd.PersistentFlags().BoolVar(&cpuProfile, "cpuprofile", false, "profile CPU")
+	RootCmd.PersistentFlags().BoolVar(&memProfile, "memprofile", false, "profile mem")
+	RootCmd.PersistentFlags().BoolVar(&blockProfile, "blockprofile", false, "profile block")
 	// Cobra also supports local flags, which will only run
 	// when this action is called directly.
 	RootCmd.Flags().BoolP("toggle", "t", false, "Help message for toggle")

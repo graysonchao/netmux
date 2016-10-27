@@ -23,3 +23,12 @@ If you try to use the example config, you should create the Unix domain socket f
 `netmux` uses `unix.mkfifo` on FreeBSD and Darwin and `unix.mknod` on Linux.
 
 The Unix domain socket type used is SOCK_STREAM.
+
+## Profiling
+    git checkout profile
+    go build -o ./netmuxp
+    ./netmuxp <--cpuprofile|--memprofile|--blockprofile>
+    python -c 'print "a" * 1024 * 1024 * 100' | nc 127.0.0.1 8888 # send 100MB to netmux
+    go tool pprof ...
+
+Fiddle with profile.json to profile different stuff.

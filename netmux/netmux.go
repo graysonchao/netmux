@@ -69,10 +69,9 @@ func createOutputs(l *log.Logger) []Output {
 	return outputs
 }
 
-func StartTCP(l *log.Logger) {
+func StartTCP(l *log.Logger, p *profile.Profile) {
 	//debug := viper.GetBool("debug")
 	// Cleanup outputs on SIGTERM
-	p := profile.Start(profile.MemProfile, profile.ProfilePath("."), profile.NoShutdownHook)
 	outputs := createOutputs(l)
 	l.Printf("Created outputs %s", outputs)
 	c := make(chan os.Signal, 2)
@@ -118,8 +117,7 @@ func StartTCP(l *log.Logger) {
 	}
 }
 
-func StartUDP(l *log.Logger) {
-	p := profile.Start(profile.MemProfile, profile.ProfilePath("."), profile.NoShutdownHook)
+func StartUDP(l *log.Logger, p *profile.Profile) {
 	outputs := createOutputs(l)
 	l.Printf("Created outputs %s", outputs)
 	// Cleanup outputs on SIGTERM
@@ -156,12 +154,12 @@ func StartUDP(l *log.Logger) {
 	}
 }
 
-func Start(l *log.Logger) {
+func Start(l *log.Logger, p *profile.Profile) {
 	switch {
 	case viper.GetString("input") == "tcp":
-		StartTCP(l)
+		StartTCP(l, p)
 	case viper.GetString("input") == "udp":
-		StartUDP(l)
+		StartUDP(l, p)
 	default:
 		l.Printf("Invalid input type: %s", viper.GetString("input"))
 	}
